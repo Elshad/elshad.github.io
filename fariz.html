@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Automation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #log {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Automation</h1>
+    <button onclick="startLoop()">Start Loop</button>
+    <button onclick="stopLoop()">Stop Loop</button>
+    <h2>Logs</h2>
+    <div id="log"></div>
+
+    <script>
+        let isRunning = false;
+        let logCount = 0;
+        const MAX_LOGS = 100; // Limit number of log entries
+
+        // Function to clear cookies
+        function clearCookies() {
+            document.cookie.split(';').forEach(cookie => {
+                const name = cookie.split('=')[0].trim();
+                document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+            });
+            logMessage('Cookies cleared');
+        }
+
+        // Function to log messages to the page and console
+        function logMessage(message) {
+            try {
+                console.log(message);
+                const logDiv = document.getElementById('log');
+                if (!logDiv) {
+                    console.error('Log div not found');
+                    return;
+                }
+                const timestamp = new Date().toLocaleString();
+                logDiv.insertAdjacentHTML('beforeend', `[${timestamp}] ${message}<br>`);
+
+                // Limit log entries
+                if (logCount >= MAX_LOGS) {
+                    const children = logDiv.childNodes;
+                    if (children.length > 2) {
+                        logDiv.removeChild(children[0]); // Remove oldest text node
+                        logDiv.removeChild(children[0]); // Remove corresponding <br>
+                    }
+                } else {
+                    logCount++;
+                }
+
+                // Update scroll position only if near the bottom
+                if (logDiv.scrollHeight > 0 && logDiv.scrollHeight - logDiv.scrollTop - logDiv.clientHeight < 50) {
+                    logDiv.scrollTop = logDiv.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Logging error:', error.message, error.stack);
+            }
+        }
+
+        // Function to call APIs
+        async function runAutomation() {
+            try {
+                // Step 1: Clear cookies
+                clearCookies();
+
+                // Step 2: Call GET API (checkLogin)
+                logMessage('Calling checkLogin API...');
+                const getResponse = await fetch('https://hanzi.chineseplus.net/api/user/api/checkLogin?withinfo=1', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // Add authentication headers if needed, e.g.:
+                        // 'Authorization': 'Bearer YOUR_TOKEN'
+                    }
+                });
+                const getData = await getResponse.json();
+                logMessage(`checkLogin Response: ${JSON.stringify(getData)}`);
+
+                // Step 3: Call POST API (likeWork)
+                logMessage('Calling likeWork API...');
+                const postResponse = await fetch('https://hanzi.chineseplus.net/api/works/api/likeWork', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // Add authentication headers if needed, e.g.:
+                        // 'Authorization': 'Bearer YOUR_TOKEN'
+                    },
+                    body: JSON.stringify({
+                        workId: '123' // Replace with actual workId or payload
+                    })
+                });
+                const postData = await postResponse.json();
+                logMessage(`likeWork Response: ${JSON.stringify(postData)}`);
+
+            } catch (error) {
+                logMessage(`Error: ${error.message}`);
+            }
+        }
+
+        // Function to run the loop
+        async function loop() {
+            if (!isRunning) return;
+            await runAutomation();
+            if (isRunning) {
+                setTimeout(loop, 10000); // Schedule next iteration after 10 seconds
+            }
+        }
+
+        // Function to start the loop
+        function startLoop() {
+            if (isRunning) {
+                logMessage('Loop is already running');
+                return;
+            }
+            isRunning = true;
+            logMessage('Starting automation loop...');
+            loop();
+        }
+
+        // Function to stop the loop
+        function stopLoop() {
+            if (isRunning) {
+                isRunning = false;
+                logMessage('Automation loop stopped');
+            } else {
+                logMessage('No loop is running');
+            }
+        }
+    </script>
+</body>
+</html>
